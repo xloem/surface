@@ -24,9 +24,9 @@ typedef union {
 typedef vec3 pt3;
 
 typedef union {
+    struct { real a, b, c, d; };
     struct { real w; vec3 xyz; };
     struct { real r; union { vec3 ijk; struct{ real i, j, k; }; }; };
-    struct { real a, b, c, d; };
     real idx[4];
 } vec4;
 typedef vec4 quat;
@@ -51,14 +51,14 @@ typedef vec4 cplx4;
 #define NEGI2 NEGAXES2[1]
 
 #define AXES3 (vec3[3]){\
-    {1,0,0},            \
-    {0,1,0},            \
-    {0,0,1}             \
+    {{1,0,0}},          \
+    {{0,1,0}},          \
+    {{0,0,1}}           \
 }
 #define NEGAXES3 (vec3[3]){\
-    {-1,0,0},              \
-    {0,-1,0},              \
-    {0,0,-1}               \
+    {{-1,0,0}},            \
+    {{0,-1,0}},            \
+    {{0,0,-1}}             \
 }
 #define X AXES3[0]
 #define Y AXES3[1]
@@ -68,16 +68,16 @@ typedef vec4 cplx4;
 #define NEGZ NEGAXES3[2]
 
 #define AXES4 (vec4[4]){\
-    {1,0,0,0},          \
-    {0,1,0,0},          \
-    {0,0,1,0},          \
-    {0,0,0,1}           \
+    {{1,0,0,0}},        \
+    {{0,1,0,0}},        \
+    {{0,0,1,0}},        \
+    {{0,0,0,1}}         \
 }
 #define NEGAXES4 (vec4[4]){\
-    {-1,0,0,0},            \
-    {0,-1,0,0},            \
-    {0,0,-1,0},            \
-    {0,0,0,-1}             \
+    {{-1,0,0,0}},          \
+    {{0,-1,0,0}},          \
+    {{0,0,-1,0}},          \
+    {{0,0,0,-1}}           \
 }
 #define R4 AXES4[0]
 #define I4 AXES4[1]
@@ -97,9 +97,10 @@ extern inline o_t* name##into(o_t* _o, v_t _v)               \
     odecl; vdecl;                                            \
     for (int _dim = 0; _dim < dims; ++ _dim)                 \
     {                                                        \
-        int odim = odims > 1 ? _dim : 0;                     \
-        int vdim = vdims > 1 ? _dim : 0;                     \
+        const int odim = odims > 1 ? _dim : 0;               \
+        const int vdim = vdims > 1 ? _dim : 0;               \
         kernel;                                              \
+        (void)odim; (void)vdim;                              \
     }                                                        \
     return _o;                                               \
 }                                                            \
@@ -116,10 +117,11 @@ extern inline o_t* name##into(o_t* _o, l_t _l, r_t _r)                   \
     odecl; ldecl; rdecl;                                                 \
     for (int _dim = 0; _dim < dims; ++ _dim)                             \
     {                                                                    \
-        int odim = odims > 1 ? _dim : 0;                                 \
-        int ldim = ldims > 1 ? _dim : 0;                                 \
-        int rdim = rdims > 1 ? _dim : 0;                                 \
+        const int odim = odims > 1 ? _dim : 0;                           \
+        const int ldim = ldims > 1 ? _dim : 0;                           \
+        const int rdim = rdims > 1 ? _dim : 0;                           \
         kernel;                                                          \
+        (void)odim;(void)ldim;(void)rdim;                                \
     }                                                                    \
     return _o;                                                           \
 }                                                                        \
@@ -227,7 +229,7 @@ _def_kernel_olr(                                \
     vec4,  real* right = _r.idx,                \
     kernel)                                     \
 
-def_kernel_out1valN(normsq, 0, *out += val[vdim] * val[vdim]);
+def_kernel_out1valN(normsq, 0, *out += val[vdim] * val[vdim])
 #define norm2(val2) sqrt(normsq2(val2))
 #define norm3(val3) sqrt(normsq3(val3))
 #define norm4(val4) sqrt(normsq4(val4))
@@ -254,6 +256,7 @@ extern inline cplx* mulcplx2into(cplx* out, cplx left, cplx right)
 {
     out->r = left.r*right.r - left.i*right.i;
     out->i = left.r*right.i + left.i*right.r;
+    return out;
 }
 extern inline cplx mulcplx2(cplx left, cplx right)
 { cplx out; return *mulcplx2into(&out, left, right); }
@@ -386,8 +389,8 @@ extern inline pt3 rotate(pt3 vec, vers orientation)
 extern inline pt3 transform(pt3 vec, vers orientation)
 {
     vec4 p = { .r = 0, .ijk = vec };
-    mul4into(&p, orientation, p);
-    mul4into(&p, p, inv4(orientation));
+    mulquatinto(&p, orientation, p);
+    mulquatinto(&p, p, inv4(orientation));
     return p.xyz;
 }
 extern inline pt3* transforminto(pt3* out, pt3 vec, vers orientation)
@@ -406,9 +409,9 @@ extern inline pt3(*transformationaxesinto(pt3(*out)[3], quat orientation))[3]
     real ab = orientation.a*bs, ac = orientation.a*cs, ad = orientation.a*ds;
     real bb = orientation.b*bs, bc = orientation.b*cs, bd = orientation.b*ds;
     real cc = orientation.c*cs, cd = orientation.c*ds, dd = orientation.d*ds;
-    (*out)[0] = (pt3){1-cc-dd,  bc-ad,  bd+ac};
-    (*out)[1] = (pt3){  bc+ad,1-bb-dd,  cd-ab};
-    (*out)[2] = (pt3){  bd-ac,  cd+ab,1-bb-cc};
+    (*out)[0] = (pt3){{1-cc-dd,  bc-ad,  bd+ac}};
+    (*out)[1] = (pt3){{  bc+ad,1-bb-dd,  cd-ab}};
+    (*out)[2] = (pt3){{  bd-ac,  cd+ab,1-bb-cc}};
     return out;
 }
 
@@ -425,9 +428,9 @@ extern inline pt3(*rotationaxesinto(pt3(*out)[3], vers orientation))[3]
     real ab = orientation.a*bs, ac = orientation.a*cs, ad = orientation.a*ds;
     real bb = orientation.b*bs, bc = orientation.b*cs, bd = orientation.b*ds;
     real cc = orientation.c*cs, cd = orientation.c*ds, dd = orientation.d*ds;
-    (*out)[0] = (pt3){1-cc-dd,  bc-ad,  bd+ac};
-    (*out)[1] = (pt3){  bc+ad,1-bb-dd,  cd-ab};
-    (*out)[2] = (pt3){  bd-ac,  cd+ab,1-bb-cc};
+    (*out)[0] = (pt3){{1-cc-dd,  bc-ad,  bd+ac}};
+    (*out)[1] = (pt3){{  bc+ad,1-bb-dd,  cd-ab}};
+    (*out)[2] = (pt3){{  bd-ac,  cd+ab,1-bb-cc}};
     return out;
 }
 /* to convert a precise matrix to a versor see https://en.wikipedia.org/wiki/Rotation_matrix#Quaternion */

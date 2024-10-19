@@ -1,5 +1,5 @@
 CPPFLAGS=-I.
-CFLAGS=-std=c2x
+CFLAGS=-std=c2x -Wall -Wpedantic -Werror
 LDLIBS=-lm
 
 all : src/draft
